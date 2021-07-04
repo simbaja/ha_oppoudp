@@ -1,0 +1,6 @@
+{
+  "name": "Oppo UDP-20x",
+  "homeassistant": "2021.1.5",
+  "domains": ["media_player", "remote"],
+  "iot_class": "Local Push"
+}
