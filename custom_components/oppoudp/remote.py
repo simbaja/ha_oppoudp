@@ -10,8 +10,8 @@ from homeassistant.components.remote import (
     RemoteEntity,
 )
 from homeassistant.const import CONF_NAME
-from oppoudpsdk import PowerStatus
-from oppoudpsdk.codes import OppoRemoteCode
+
+from oppoudpsdk import PowerStatus, OppoRemoteCode
 
 from .entity import OppoUdpEntity
 from .const import DOMAIN

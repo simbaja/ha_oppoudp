@@ -4,16 +4,16 @@ import asyncio
 import async_timeout
 import logging
 from typing import Optional
-from random import randrange
 
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from oppoudpsdk import OppoClient, OppoDevice
 from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED, EVENT_CONNECTED, EVENT_DISCONNECTED
 
-from .const import ASYNC_TIMEOUT, MIN_RETRY_DELAY, MAX_RETRY_DELAY, RETRY_OFFLINE_COUNT
+from .const import *
 from .exceptions import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -116,10 +116,12 @@ class OppoUdpManager:
         """Handle disconnection."""
         _LOGGER.debug(f"Disconnected. Attempting to reconnect in {MIN_RETRY_DELAY} seconds")
         self.hass.loop.call_later(MIN_RETRY_DELAY, self.reconnect, True)
+        self._dispatch_send(SIGNAL_DISCONNECTED)
 
     async def on_connect(self, _):
         """Set state upon connection."""
         self._retry_count = 0
+        self._dispatch_send(SIGNAL_CONNECTED, self.device)
 
     def _create_oppo_client(self, event_loop: Optional[asyncio.AbstractEventLoop]) -> OppoClient:
         """
@@ -132,6 +134,9 @@ class OppoUdpManager:
         client.add_event_handler(EVENT_DEVICE_STATE_UPDATED, self.on_device_state_updated)
         client.add_event_handler(EVENT_DISCONNECTED, self.on_disconnect)
         client.add_event_handler(EVENT_CONNECTED, self.on_connect)
+
+        #send a signal to all associated entities that we have a new client
+        self._dispatch_send(SIGNAL_CLIENT_CREATED, client)
         return client    
 
     async def _get_client(self) -> OppoClient:
@@ -147,7 +152,13 @@ class OppoUdpManager:
         
         loop = self._hass.loop
         self._client = self._create_oppo_client(event_loop=loop)
-        return self._client        
+        return self._client
+
+    def _dispatch_send(self, signal, *args):
+        """Dispatch a signal to all entities managed by this manager."""
+        async_dispatcher_send(
+            self.hass, f"{signal}_{self.config_entry.entry_id}", *args
+        )
 
     def _get_retry_delay(self) -> int:
         delay = MIN_RETRY_DELAY * 2 ** (self._retry_count - 1)
