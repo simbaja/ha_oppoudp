@@ -24,7 +24,7 @@ from homeassistant.components.media_player.const import (
     SUPPORT_VOLUME_STEP,
 )
 from homeassistant.const import (
-    CONF_NAME,
+    CONF_HOST,
     STATE_IDLE,
     STATE_OFF,
     STATE_PAUSED,
@@ -64,16 +64,16 @@ SUPPORT_OPPO_UDP = (
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Load Oppo UDP media player based on a config entry."""
-    name = config_entry.data[CONF_NAME]
+    host = config_entry.data[CONF_HOST]
     manager = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([OppoUdpMediaPlayer(name, config_entry.entry_id, manager)])
+    async_add_entities([OppoUdpMediaPlayer(host, config_entry.entry_id, manager)])
 
 class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     """Representation of an Oppo UDP media player."""
 
-    def __init__(self, name, identifier, manager, **kwargs):
+    def __init__(self, host, identifier, manager, **kwargs):
         """Initialize the Oppo UDP media player."""
-        super().__init__(name, identifier, manager, **kwargs)
+        super().__init__(host, identifier, manager, **kwargs)
 
     @callback
     def async_client_created(self, client: OppoClient):

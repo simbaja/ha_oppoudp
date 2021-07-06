@@ -6,7 +6,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_PORT
 from oppoudpsdk import OppoClient
 
 from .const import DEFAULT_PORT, DOMAIN
@@ -16,10 +16,8 @@ _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_NAME): str,
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
-        vol.Optional(CONF_MAC): str
     })
 
 async def validate_input(hass: HomeAssistant, data: dict):
@@ -29,12 +27,12 @@ async def validate_input(hass: HomeAssistant, data: dict):
     # Validate the data can be used to set up a connection.
 
     #connect to the client
-    client = OppoClient(data[CONF_HOST], data[CONF_PORT], data[CONF_MAC])
+    client = OppoClient(data[CONF_HOST], data[CONF_PORT])
     result = await client.test_connection()
     if not result:
         raise HaCannotConnect
 
-    return { "title": f"Oppo UDP-20x ({data[CONF_NAME]})"}
+    return { "title": f"{data[CONF_HOST]}"}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

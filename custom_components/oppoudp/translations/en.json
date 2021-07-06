@@ -1,0 +1,26 @@
+{
+  "title": "Oppo UDP-20x",
+  "config": {
+    "step": {
+      "init": {
+        "data": {
+          "host": "Host Name/IP",
+          "port": "Port Number"
+        }
+      },
+      "user": {
+        "data": {
+          "host": "Host Name/IP",
+          "port": "Port Number"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured_account": "[%key:common::config_flow::abort::already_configured_account%]"
+    }
+  }
+}

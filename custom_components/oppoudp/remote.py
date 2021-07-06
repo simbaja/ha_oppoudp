@@ -9,7 +9,7 @@ from homeassistant.components.remote import (
     DEFAULT_DELAY_SECS,
     RemoteEntity,
 )
-from homeassistant.const import CONF_NAME
+from homeassistant.const import CONF_HOST
 
 from oppoudpsdk import PowerStatus, OppoRemoteCode
 
@@ -22,9 +22,9 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Load Oppo UDP remote based on a config entry."""
-    name = config_entry.data[CONF_NAME]
+    host = config_entry.data[CONF_HOST]
     manager = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([OppoUdpRemote(name, config_entry.entry_id, manager)])
+    async_add_entities([OppoUdpRemote(host, config_entry.entry_id, manager)])
 
 class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
     """Device that sends commands to an Oppo UDP."""
@@ -32,7 +32,9 @@ class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
     @property
     def is_on(self):
         """Return true if device is on."""
-        return self.device.power_status == PowerStatus.ON
+        if self.device:
+            return self.device.power_status == PowerStatus.ON
+        return False
 
     @property
     def should_poll(self):
@@ -41,10 +43,18 @@ class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
+        if not self.device:
+            _LOGGER.error("Unable to send commands, not connected to %s", self._host)
+            return
+
         await self.device.async_send_command(OppoRemoteCode.PON)
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
+        if not self.device:
+            _LOGGER.error("Unable to send commands, not connected to %s", self._host)
+            return
+
         await self.device.async_send_command(OppoRemoteCode.POF)
 
     async def async_send_command(self, command, **kwargs):
@@ -52,8 +62,8 @@ class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
         num_repeats = kwargs[ATTR_NUM_REPEATS]
         delay = kwargs.get(ATTR_DELAY_SECS, DEFAULT_DELAY_SECS)
 
-        if not self.is_on:
-            _LOGGER.error("Unable to send commands, not connected to %s", self._name)
+        if not self.device:
+            _LOGGER.error("Unable to send commands, not connected to %s", self._host)
             return
 
         for _ in range(num_repeats):

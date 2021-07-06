@@ -23,9 +23,9 @@ class OppoUdpManager:
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         self._hass = hass
         self._config_entry = config_entry
-        self._host_name = config_entry[CONF_HOST]
-        self._port_number = config_entry[CONF_PORT]
-        self._mac_address = config_entry[CONF_MAC]
+        self._host_name = config_entry.data[CONF_HOST]
+        self._port_number = config_entry.data[CONF_PORT]
+        self._mac_address = config_entry.data.get(CONF_MAC, None)
 
         self._reset_initialization()
 
@@ -71,7 +71,7 @@ class OppoUdpManager:
             _LOGGER.debug('Client running')
         except:
             _LOGGER.debug('Could not start the client')
-            self.client = None
+            self._client = None
             raise
 
     @callback
@@ -157,7 +157,7 @@ class OppoUdpManager:
     def _dispatch_send(self, signal, *args):
         """Dispatch a signal to all entities managed by this manager."""
         async_dispatcher_send(
-            self.hass, f"{signal}_{self.config_entry.entry_id}", *args
+            self.hass, f"{signal}_{self._config_entry.entry_id}", *args
         )
 
     def _get_retry_delay(self) -> int:

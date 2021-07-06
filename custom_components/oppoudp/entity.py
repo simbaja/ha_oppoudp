@@ -19,15 +19,10 @@ class OppoUdpEntity(Entity):
     """
     Base class for Oppo Home Assistant entities
     """
-    def __init__(self, name: str, identifier: str, manager: OppoUdpManager):
-        self._name = name
+    def __init__(self, host: str, identifier: str, manager: OppoUdpManager):
+        self._host = host
         self._identifier = identifier
-        self._hass = manager.hass
         self._manager = manager
-
-    @property
-    def hass(self) -> HomeAssistant:
-        return self._hass
 
     @property
     def device(self) -> OppoDevice:
@@ -38,9 +33,9 @@ class OppoUdpEntity(Entity):
         return self._manager.online
 
     @property
-    def name(self):
-        """Return the name of the device."""
-        return self._name
+    def host(self):
+        """Return the host name of the device."""
+        return self._host
 
     @property
     def unique_id(self):
