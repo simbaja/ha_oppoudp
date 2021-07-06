@@ -1,3 +1,5 @@
+"""Base Entity for the Oppo UDP-20x integration."""
+
 import asyncio
 import logging
 from typing import Dict, List, Optional
@@ -13,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class OppoUdpEntity(Entity):
     """
-    Base class for Oppo entities
+    Base class for Oppo Home Assistant entities
     """
     def __init__(self, name: str, identifier: str, manager: OppoUdpManager):
         self._name = name

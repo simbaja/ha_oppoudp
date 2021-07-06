@@ -1,3 +1,5 @@
+"""Connection manager Oppo UDP-20x integration."""
+
 import asyncio
 import async_timeout
 import logging
@@ -11,12 +13,13 @@ from homeassistant.config_entries import ConfigEntry
 from oppoudpsdk import OppoClient, OppoDevice
 from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED, EVENT_CONNECTED, EVENT_DISCONNECTED
 
-from .const import ASYNC_TIMEOUT, PLATFORMS, MIN_RETRY_DELAY, MAX_RETRY_DELAY, RETRY_OFFLINE_COUNT
+from .const import ASYNC_TIMEOUT, MIN_RETRY_DELAY, MAX_RETRY_DELAY, RETRY_OFFLINE_COUNT
 from .exceptions import *
 
 _LOGGER = logging.getLogger(__name__)
 
 class OppoUdpManager:
+    """Manages a connection with an Oppo device including retries when the connection is dropped"""
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         self._hass = hass
         self._config_entry = config_entry
