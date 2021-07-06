@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, PLATFORMS
-from .device import OppoHaDevice
+from .manager import OppoUdpManager
 
 CONFIG_SCHEMA = cv.deprecated(DOMAIN)
 
@@ -20,33 +20,40 @@ async def async_setup(hass: HomeAssistant, config: dict):
     
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up the component."""
-    hass.data.setdefault(DOMAIN, {})
 
-    device = OppoHaDevice(hass, entry.data[CONF_HOST], entry.data[CONF_PORT], entry.data[CONF_MAC])
-    hass.data[DOMAIN][entry.entry_id] = device
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, device.shutdown)
+    manager = OppoUdpManager(hass, entry)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
 
-    # Initialize the platforms
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
+    async def on_hass_stop(event):
+        """Stop updates when hass stops"""
+        await manager.disconnect()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+    )
+
+    async def setup_platforms():
+        """Set up platforms and initiate connection."""
+        await asyncio.gather(
+            *[
+                hass.config_entries.async_forward_entry_setup(entry, platform)
+                for platform in PLATFORMS
+            ]
         )
+        await manager.async_start_client()
+
+    hass.async_create_task(setup_platforms())
 
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    device: OppoHaDevice = hass.data[DOMAIN][entry.entry_id] 
-    unload_ok = all(
-        await asyncio.gather(
-                *[
-                    hass.config_entries.async_forward_entry_unload(entry, component)
-                    for component in PLATFORMS
-                ]
-            )
-        )
+    manager: OppoUdpManager = hass.data[DOMAIN][entry.entry_id] 
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        await manager.disconnect()
     
     return unload_ok
 
