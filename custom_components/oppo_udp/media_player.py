@@ -38,6 +38,7 @@ from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED
 from oppoudpsdk import OppoClient, OppoDevice, OppoPlaybackStatus, OppoRemoteCode
 from oppoudpsdk import SetInputSource, SetRepeatMode, SetSearchMode
 from oppoudpsdk import DiscType, PlayStatus, RepeatMode
+from oppoudpsdk.response.enums import PowerStatus
 
 from .entity import OppoUdpEntity
 from .const import DOMAIN
@@ -87,13 +88,19 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def state(self):
         """Return the state of the device."""
-        if self.device is None:
-            return STATE_OFF
         if not self.available:
             return None
+        if self.device is None:
+            return None
+        if self.device.power_status == PowerStatus.DISCONNECTED:
+            return None
+        if self.device.power_status == PowerStatus.OFF:
+            return STATE_OFF
         if self.playback_status:
             state = self.playback_status
-            if state in (PlayStatus.OFF, PlayStatus.SETUP, PlayStatus.HOME_MENU, PlayStatus.MEDIA_CENTER):
+            if state == PlayStatus.OFF:
+                return STATE_OFF        
+            if state in (PlayStatus.SETUP, PlayStatus.HOME_MENU, PlayStatus.MEDIA_CENTER):
                 return STATE_IDLE
             if state == PlayStatus.PLAY:
                 return STATE_PLAYING
@@ -181,7 +188,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     def media_title(self):
         """Title of current playing media."""
         if self.media_content_type == MEDIA_TYPE_MUSIC:
-            return self.playback_info.track
+            return self.playback_info.track_name
         if self.device:
             return {
                 DiscType.BLURAY: "Blu-ray Disc",
