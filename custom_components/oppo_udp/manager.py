@@ -67,7 +67,7 @@ class OppoUdpManager:
         try:
             _LOGGER.debug('Creating and starting client')
             await self._get_client()
-            await asyncio.ensure_future(self.client.async_run_client(), loop=self._hass.loop)
+            self.hass.loop.create_task(self.client.async_run_client())
             _LOGGER.debug('Client running')
         except:
             _LOGGER.debug('Could not start the client')
