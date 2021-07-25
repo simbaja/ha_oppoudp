@@ -68,19 +68,19 @@ class OppoUdpEntity(Entity):
         def _async_connected(device):
             """Handle that a connection was made to a device."""
             self.async_device_connected(device)
-            self.async_write_ha_state()
+            self.schedule_update_ha_state()
 
         @callback
         def _async_disconnected():
             """Handle that a connection to a device was lost."""
             self.async_device_disconnected()
-            self.async_write_ha_state()
+            self.schedule_update_ha_state()
 
         @callback
         def _async_client_created(client):
             """Handle when a client is created (due to reconnect)."""
             self.async_client_created(client)
-            self.async_write_ha_state()            
+            self.schedule_update_ha_state()   
 
         async_dispatcher_connect(
             self.hass, f"{SIGNAL_CONNECTED}_{self._identifier}", _async_connected

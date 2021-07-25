@@ -22,6 +22,8 @@ from homeassistant.components.media_player.const import (
     SUPPORT_VOLUME_MUTE,
     SUPPORT_VOLUME_SET,
     SUPPORT_VOLUME_STEP,
+    SUPPORT_SELECT_SOUND_MODE,
+    SUPPORT_SELECT_SOURCE,
 )
 from homeassistant.const import (
     CONF_HOST,
@@ -61,6 +63,7 @@ SUPPORT_OPPO_UDP = (
     | SUPPORT_VOLUME_STEP
     | SUPPORT_REPEAT_SET
     | SUPPORT_SHUFFLE_SET
+    | SUPPORT_SELECT_SOURCE
 )
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -83,7 +86,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
 
     async def _on_device_state_updated(self, device: OppoDevice):
         """Handle a device state update event"""        
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()
 
     @property
     def state(self):
@@ -144,6 +147,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def media_content_type(self):
         """Content type of current playing media."""
+
         if self.device:
                 #Assuming that UDP is only being used to play discs
                 #TODO: determine how to handle media center stuff
@@ -163,18 +167,18 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     def media_duration(self):            
         """Duration of current playing media in seconds."""
         if self.media_content_type == MEDIA_TYPE_MUSIC:
-            self.playback_info.track_duration.total_seconds()
+            return self.playback_info.track_duration.total_seconds()
         if self.media_content_type == MEDIA_TYPE_VIDEO:
-            self.playback_info.total_duration.total_seconds()
+            return self.playback_info.total_duration.total_seconds()
         return None
 
     @property
     def media_position(self):
         """Position of current playing media in seconds."""
         if self.media_content_type == MEDIA_TYPE_MUSIC:
-            self.playback_info.track_elapsed_time.total_seconds()
+            return self.playback_info.track_elapsed_time.total_seconds()
         if self.media_content_type == MEDIA_TYPE_VIDEO:
-            self.playback_info.total_elapsed_time.total_seconds()
+            return self.playback_info.total_elapsed_time.total_seconds()
         return None
 
     @property
@@ -232,13 +236,13 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     def source(self):
         """Name of the current input source."""
         if self.device and self.device.input_source:
-            return self.device.input_source.name
+            return self.device.input_source.name.replace("_"," ").title()
         return None
 
     @property
     def source_list(self):
         """List of available input sources."""
-        return [e.name for e in SetInputSource]
+        return [e.name.replace("_"," ").title() for e in SetInputSource]
 
     @property
     def sound_mode(self):
