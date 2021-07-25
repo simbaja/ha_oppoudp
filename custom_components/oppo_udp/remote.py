@@ -10,8 +10,10 @@ from homeassistant.components.remote import (
     RemoteEntity,
 )
 from homeassistant.const import CONF_HOST
+from homeassistant.core import callback
 
-from oppoudpsdk import PowerStatus, OppoRemoteCode
+from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED
+from oppoudpsdk import PowerStatus, OppoRemoteCode, OppoClient, OppoDevice
 
 from .entity import OppoUdpEntity
 from .const import DOMAIN
@@ -28,6 +30,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
     """Device that sends commands to an Oppo UDP."""
+
+    @callback
+    def async_client_created(self, client: OppoClient):
+        """Handle when a new client is created (due to reconnections)."""
+        client.add_event_handler(EVENT_DEVICE_STATE_UPDATED, self._on_device_state_updated)
+
+    async def _on_device_state_updated(self, device: OppoDevice):
+        """Handle a device state update event"""        
+        self.schedule_update_ha_state()    
 
     @property
     def is_on(self):

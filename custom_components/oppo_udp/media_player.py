@@ -22,7 +22,6 @@ from homeassistant.components.media_player.const import (
     SUPPORT_VOLUME_MUTE,
     SUPPORT_VOLUME_SET,
     SUPPORT_VOLUME_STEP,
-    SUPPORT_SELECT_SOUND_MODE,
     SUPPORT_SELECT_SOURCE,
 )
 from homeassistant.const import (
@@ -39,8 +38,7 @@ import homeassistant.util.dt as dt_util
 from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED
 from oppoudpsdk import OppoClient, OppoDevice, OppoPlaybackStatus, OppoRemoteCode
 from oppoudpsdk import SetInputSource, SetRepeatMode, SetSearchMode
-from oppoudpsdk import DiscType, PlayStatus, RepeatMode
-from oppoudpsdk.response.enums import PowerStatus
+from oppoudpsdk import DiscType, PlayStatus, RepeatMode, PowerStatus
 
 from .entity import OppoUdpEntity
 from .const import DOMAIN
