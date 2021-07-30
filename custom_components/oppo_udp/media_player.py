@@ -1,5 +1,6 @@
 """Support for Oppo UDP-20x media player."""
 from datetime import timedelta
+from string import Template
 from typing import Optional
 import logging
 import musicbrainzngs
@@ -74,6 +75,19 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities([OppoUdpMediaPlayer(host, config_entry.entry_id, manager)])
 
+class DeltaTemplate(Template):
+    delimiter = "%"
+
+def strfdelta(tdelta, fmt):
+    d = {"D": tdelta.days}
+    hours, rem = divmod(tdelta.seconds, 3600)
+    minutes, seconds = divmod(rem, 60)
+    d["H"] = '{:02d}'.format(hours)
+    d["M"] = '{:02d}'.format(minutes)
+    d["S"] = '{:02d}'.format(seconds)
+    t = DeltaTemplate(fmt)
+    return t.substitute(**d)
+
 class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     """Representation of an Oppo UDP media player."""
 
@@ -111,11 +125,11 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
             return None
         if self.device.power_status == PowerStatus.DISCONNECTED:
             return None
-        if self.device.power_status == PowerStatus.OFF:
+        if self.device.power_status in [PowerStatus.OFF, PowerStatus.UNKNOWN]:
             return STATE_OFF
         if self.playback_status:
             state = self.playback_status
-            if state in [PlayStatus.OFF, PlayStatus.UNKNOWN]:
+            if state == PlayStatus.OFF:
                 return STATE_OFF        
             if state in [PlayStatus.SETUP, PlayStatus.HOME_MENU, PlayStatus.MEDIA_CENTER]:
                 return STATE_IDLE
@@ -326,10 +340,10 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         attrs = {}
 
         if self.device:
-            attrs[ATTR_DEVICE_HDMI_MODE] = self.device.hdmi_mode
-            attrs[ATTR_DEVICE_HDR_SETTING] = self.device.hdr_setting
-            attrs[ATTR_DEVICE_ZOOM_MODE] = self.device.zoom_mode
-            attrs[ATTR_DEVICE_DISC_TYPE] = self.device.disc_type
+            attrs[ATTR_DEVICE_HDMI_MODE] = str(self.device.hdmi_mode)
+            attrs[ATTR_DEVICE_HDR_SETTING] = str(self.device.hdr_setting)
+            attrs[ATTR_DEVICE_ZOOM_MODE] = str(self.device.zoom_mode)
+            attrs[ATTR_DEVICE_DISC_TYPE] = str(self.device.disc_type)
             attrs[ATTR_DEVICE_CDDB_ID] = self.device.cddb_id
             attrs[ATTR_DEVICE_SUBTITLE_SHIFT] = self.device.subtitle_shift
             attrs[ATTR_DEVICE_OSD_POSITION] = self.device.osd_position
@@ -342,21 +356,21 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
             attrs[ATTR_PLAYBACK_TRACK_TOTAL] = self.playback_info.track_total
             attrs[ATTR_PLAYBACK_CHAPTER] = self.playback_info.chapter
             attrs[ATTR_PLAYBACK_CHAPTER_TOTAL] = self.playback_info.chapter_total
-            attrs[ATTR_PLAYBACK_TRACK_ELAPSED_TIME] = self.playback_info.track_elapsed_time
-            attrs[ATTR_PLAYBACK_TRACK_REMAINING_TIME] = self.playback_info.track_remaining_time
-            attrs[ATTR_PLAYBACK_TRACK_DURATION] = self.playback_info.track_duration
-            attrs[ATTR_PLAYBACK_CHAPTER_ELAPSED_TIME] = self.playback_info.chapter_elapsed_time
-            attrs[ATTR_PLAYBACK_CHAPTER_REMAINING_TIME] = self.playback_info.chapter_remaining_time
-            attrs[ATTR_PLAYBACK_CHAPTER_DURATION] = self.playback_info.chapter_duration
-            attrs[ATTR_PLAYBACK_TOTAL_ELAPSED_TIME] = self.playback_info.total_elapsed_time
-            attrs[ATTR_PLAYBACK_TOTAL_REMAINING_TIME] = self.playback_info.total_remaining_time
-            attrs[ATTR_PLAYBACK_TOTAL_DURATION] = self.playback_info.total_duration
+            attrs[ATTR_PLAYBACK_TRACK_ELAPSED_TIME] = strfdelta(self.playback_info.track_elapsed_time, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_TRACK_REMAINING_TIME] = strfdelta(self.playback_info.track_remaining_time, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_TRACK_DURATION] = strfdelta(self.playback_info.track_duration, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_CHAPTER_ELAPSED_TIME] = strfdelta(self.playback_info.chapter_elapsed_time, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_CHAPTER_REMAINING_TIME] = strfdelta(self.playback_info.chapter_remaining_time, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_CHAPTER_DURATION] = strfdelta(self.playback_info.chapter_duration, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_TOTAL_ELAPSED_TIME] = strfdelta(self.playback_info.total_elapsed_time, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_TOTAL_REMAINING_TIME] = strfdelta(self.playback_info.total_remaining_time, "%H:%M:%S")
+            attrs[ATTR_PLAYBACK_TOTAL_DURATION] = strfdelta(self.playback_info.total_duration, "%H:%M:%S")
             attrs[ATTR_PLAYBACK_AUDIO_TYPE] = self.playback_info.audio_type
             attrs[ATTR_PLAYBACK_SUBTITLE_TYPE] = self.playback_info.subtitle_type
             attrs[ATTR_PLAYBACK_ASPECT_RATIO] = self.playback_info.aspect_ratio
-            attrs[ATTR_PLAYBACK_REPEAT_MODE] = self.playback_info.repeat_mode
-            attrs[ATTR_PLAYBACK_VIDEO_3D_STATUS] = self.playback_info.video_3d_status
-            attrs[ATTR_PLAYBACK_VIDEO_HDR_STATUS] = self.playback_info.video_hdr_status
+            attrs[ATTR_PLAYBACK_REPEAT_MODE] = str(self.playback_info.repeat_mode)
+            attrs[ATTR_PLAYBACK_VIDEO_3D_STATUS] = str(self.playback_info.video_3d_status)
+            attrs[ATTR_PLAYBACK_VIDEO_HDR_STATUS] = str(self.playback_info.video_hdr_status)
             attrs[ATTR_PLAYBACK_MEDIA_FILE_FORMAT] = self.playback_info.media_file_format
             attrs[ATTR_PLAYBACK_MEDIA_FILE_NAME] = self.playback_info.media_file_name
 
