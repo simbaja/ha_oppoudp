@@ -28,3 +28,11 @@ Configuration is done via the HA user interface.
 1. When installing, the Oppo UDP must be ON so that it can pass the communications test.
 2. You should set the standby mode to "Network Standby"
 
+[commits-shield]: https://img.shields.io/github/commit-activity/y/simbaja/ha_oppoudp.svg?style=for-the-badge
+[commits]: https://github.com/simbaja/ha_oppoudp/commits/master
+[hacs]: https://github.com/custom-components/hacs
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/simbaja/ha_oppoudp.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/badge/maintainer-Jack%20Simbach%20%40simbaja-blue.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/simbaja/ha_oppoudp.svg?style=for-the-badge
+[releases]: https://github.com/simbaja/ha_oppoudp/releases
