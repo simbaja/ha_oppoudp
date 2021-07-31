@@ -17,6 +17,8 @@
     },
     "error": {
       "cannot_connect": "Failed to connect",
+      "already_configured": "Host already configured",
+      "invalid_host": "Invalid host",
       "unknown": "Unexpected error"
     },
     "abort": {

@@ -26,7 +26,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Load Oppo UDP remote based on a config entry."""
     host = config_entry.data[CONF_HOST]
     manager = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([OppoUdpRemote(host, config_entry.entry_id, manager)])
+    async_add_entities([OppoUdpRemote(host, DOMAIN, config_entry.entry_id, manager)])
 
 class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
     """Device that sends commands to an Oppo UDP."""

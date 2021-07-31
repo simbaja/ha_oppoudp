@@ -73,7 +73,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Load Oppo UDP media player based on a config entry."""
     host = config_entry.data[CONF_HOST]
     manager = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([OppoUdpMediaPlayer(host, config_entry.entry_id, manager)])
+    async_add_entities([OppoUdpMediaPlayer(host, DOMAIN, config_entry.entry_id, manager)])
 
 class DeltaTemplate(Template):
     delimiter = "%"
@@ -91,9 +91,9 @@ def strfdelta(tdelta, fmt):
 class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     """Representation of an Oppo UDP media player."""
 
-    def __init__(self, host, identifier, manager, **kwargs):
+    def __init__(self, host, name, identifier, manager, **kwargs):
         """Initialize the Oppo UDP media player."""
-        super().__init__(host, identifier, manager, **kwargs)
+        super().__init__(host, name, identifier, manager, **kwargs)
         musicbrainzngs.set_useragent("Python HA OppoUDP Integration","0.1.11","(https://github.com/simbaja/ha_oppoudp)")
         self._musicbrainz_info = None
 
