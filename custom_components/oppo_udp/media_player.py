@@ -394,7 +394,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
 
     async def async_select_source(self, source):
         """Select input source."""
-        await self.device.async_set_input_source(SetInputSource[source])
+        await self.device.async_set_input_source(SetInputSource[source.replace(" ","_").upper()])
 
     async def async_media_play(self):
         """Play media."""
