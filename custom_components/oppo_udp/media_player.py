@@ -6,34 +6,27 @@ import logging
 import musicbrainzngs
 
 from homeassistant.components.media_player import DEVICE_CLASS_TV, MediaPlayerEntity
+from homeassistant.components.media_player import MediaPlayerEntity
+
 from homeassistant.components.media_player.const import (
-    MEDIA_TYPE_MUSIC,
-    MEDIA_TYPE_VIDEO,
     REPEAT_MODE_ALL,
     REPEAT_MODE_OFF,
     REPEAT_MODE_ONE,
-    SUPPORT_NEXT_TRACK,
-    SUPPORT_PAUSE,
-    SUPPORT_PLAY,
-    SUPPORT_PREVIOUS_TRACK,
-    SUPPORT_REPEAT_SET,
-    SUPPORT_SEEK,
-    SUPPORT_SHUFFLE_SET,
-    SUPPORT_STOP,
-    SUPPORT_TURN_OFF,
-    SUPPORT_TURN_ON,
-    SUPPORT_VOLUME_MUTE,
-    SUPPORT_VOLUME_SET,
-    SUPPORT_VOLUME_STEP,
-    SUPPORT_SELECT_SOURCE,
+    MediaPlayerEntityFeature, 
+    MediaType,
+    MediaPlayerState,
+    RepeatMode,
 )
+
 from homeassistant.const import (
     CONF_HOST,
-    STATE_IDLE,
-    STATE_OFF,
+    STATE_UNAVAILABLE,
     STATE_PAUSED,
     STATE_PLAYING,
-    STATE_STANDBY,
+    STATE_IDLE,
+    STATE_UNKNOWN,
+    STATE_ON,
+    STATE_OFF,
 )
 from homeassistant.core import callback
 import homeassistant.util.dt as dt_util
@@ -51,23 +44,6 @@ from .musicbrainz import async_musicbrainz_get_info, MusicBrainzInfo
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
-
-SUPPORT_OPPO_UDP = (
-    SUPPORT_TURN_ON
-    | SUPPORT_TURN_OFF
-    | SUPPORT_PAUSE
-    | SUPPORT_PLAY
-    | SUPPORT_SEEK
-    | SUPPORT_STOP
-    | SUPPORT_NEXT_TRACK
-    | SUPPORT_PREVIOUS_TRACK
-    | SUPPORT_VOLUME_MUTE
-    | SUPPORT_VOLUME_SET
-    | SUPPORT_VOLUME_STEP
-    | SUPPORT_REPEAT_SET
-    | SUPPORT_SHUFFLE_SET
-    | SUPPORT_SELECT_SOURCE
-)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Load Oppo UDP media player based on a config entry."""
@@ -126,18 +102,18 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         if self.device.power_status == PowerStatus.DISCONNECTED:
             return None
         if self.device.power_status in [PowerStatus.OFF, PowerStatus.UNKNOWN]:
-            return STATE_OFF
+            return MediaPlayerState.OFF
         if self.playback_status:
             state = self.playback_status
             if state == PlayStatus.OFF:
-                return STATE_OFF        
+                return MediaPlayerState.OFF        
             if state in [PlayStatus.SETUP, PlayStatus.HOME_MENU, PlayStatus.MEDIA_CENTER]:
-                return STATE_IDLE
+                return MediaPlayerState.IDLE
             if state in [PlayStatus.PLAY, PlayStatus.DISC_MENU]:
-                return STATE_PLAYING
+                return MediaPlayerState.PLAYING
             if state in [PlayStatus.PAUSE, PlayStatus.SLOW_FORWARD, PlayStatus.SLOW_REVERSE, PlayStatus.FAST_FORWARD, PlayStatus.FAST_REVERSE]:
-                return STATE_PAUSED
-            return STATE_STANDBY
+                return MediaPlayerState.PAUSED
+            return MediaPlayerState.STANDBY
         return None
 
     @property
@@ -179,32 +155,32 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         if self.device:
             #map disc types to media type, assume video if none
             return {
-                DiscType.BLURAY: MEDIA_TYPE_VIDEO,
-                DiscType.UHD_BLURAY: MEDIA_TYPE_VIDEO,
-                DiscType.DVD_VIDEO: MEDIA_TYPE_VIDEO,
-                DiscType.VCD2: MEDIA_TYPE_VIDEO,
-                DiscType.SVCD: MEDIA_TYPE_VIDEO,
-                DiscType.DVD_AUDIO: MEDIA_TYPE_MUSIC,
-                DiscType.SACD: MEDIA_TYPE_MUSIC,
-                DiscType.CDDA: MEDIA_TYPE_MUSIC,
-            }.get(self.device.disc_type, MEDIA_TYPE_VIDEO)
+                DiscType.BLURAY: MediaType.VIDEO,
+                DiscType.UHD_BLURAY: MediaType.VIDEO,
+                DiscType.DVD_VIDEO: MediaType.VIDEO,
+                DiscType.VCD2: MediaType.VIDEO,
+                DiscType.SVCD: MediaType.VIDEO,
+                DiscType.DVD_AUDIO: MediaType.MUSIC,
+                DiscType.SACD: MediaType.MUSIC,
+                DiscType.CDDA: MediaType.MUSIC,
+            }.get(self.device.disc_type, MediaType.VIDEO)
         return None
 
     @property
     def media_duration(self):            
         """Duration of current playing media in seconds."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             return self.playback_info.track_duration.total_seconds()
-        if self.media_content_type == MEDIA_TYPE_VIDEO:
+        if self.media_content_type == MediaType.VIDEO:
             return self.playback_info.total_duration.total_seconds()
         return None
 
     @property
     def media_position(self):
         """Position of current playing media in seconds."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             return self.playback_info.track_elapsed_time.total_seconds()
-        if self.media_content_type == MEDIA_TYPE_VIDEO:
+        if self.media_content_type == MediaType.VIDEO:
             return self.playback_info.total_elapsed_time.total_seconds()
         return None
 
@@ -218,7 +194,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def media_title(self):
         """Title of current playing media."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             track_name = self.playback_info.track_name
             if (not track_name or track_name.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.track_titles:
                 mb_track_name = self.musicbrainz_info.track_titles.get(self.media_track, None)
@@ -242,7 +218,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def media_artist(self):
         """Artist of current playing media, music track only."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             artist = self.playback_info.track_performer
             if (not artist or artist.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.artist:
                 artist = self.musicbrainz_info.artist
@@ -252,7 +228,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def media_album_name(self):
         """Album name of current playing media, music track only."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             album = self.playback_info.track_performer
             if (not album or album.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.title:
                 album = self.musicbrainz_info.title
@@ -262,7 +238,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def media_album_artist(self):
         """Album artist of current playing media, music track only."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             artist = self.playback_info.track_performer
             if (not artist or artist.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.artist:
                 artist = self.musicbrainz_info.artist
@@ -272,19 +248,19 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     @property
     def media_track(self):
         """Track number of current playing media, music track only."""
-        if self.media_content_type == MEDIA_TYPE_MUSIC:        
+        if self.media_content_type == MediaType.MUSIC:        
             return self.playback_info.track        
         return None
 
     @property
     def media_image_hash(self) -> Optional[str]:
-        if self.media_content_type == MEDIA_TYPE_MUSIC:  
+        if self.media_content_type == MediaType.MUSIC:  
             if self.musicbrainz_info:
                 return self.musicbrainz_info.release_id
         return None
 
     async def async_get_media_image(self):
-        if self.media_content_type == MEDIA_TYPE_MUSIC:
+        if self.media_content_type == MediaType.MUSIC:
             if self.musicbrainz_info and self.musicbrainz_info.image:
                 return self.musicbrainz_info.image, "image/jpeg"
         return None
@@ -332,8 +308,24 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
 
     @property
     def supported_features(self):
-        """Flag media player features that are supported."""
-        return SUPPORT_OPPO_UDP
+        return (
+            MediaPlayerEntityFeature.PLAY
+            | MediaPlayerEntityFeature.PLAY_MEDIA
+            | MediaPlayerEntityFeature.PAUSE
+            | MediaPlayerEntityFeature.STOP
+            | MediaPlayerEntityFeature.VOLUME_SET
+            | MediaPlayerEntityFeature.VOLUME_MUTE
+            | MediaPlayerEntityFeature.BROWSE_MEDIA
+            | MediaPlayerEntityFeature.SEEK
+            | MediaPlayerEntityFeature.TURN_OFF
+            | MediaPlayerEntityFeature.TURN_ON
+            | MediaPlayerEntityFeature.REPEAT_SET
+            | MediaPlayerEntityFeature.SHUFFLE_SET
+            | MediaPlayerEntityFeature.NEXT_TRACK
+            | MediaPlayerEntityFeature.PREVIOUS_TRACK
+            | MediaPlayerEntityFeature.SELECT_SOURCE
+            | MediaPlayerEntityFeature.VOLUME_STEP
+        )
 
     @property
     def extra_state_attributes(self):
@@ -410,6 +402,11 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         """Pause the media player."""
         if self.device:
             await self.device.async_send_command(OppoRemoteCode.PAU)
+            
+    async def async_media_pop_up_menu(self):
+        """send pop up menu command."""
+        if self.device:
+            await self.device.async_send_command(OppoRemoteCode.MNU)
 
     async def async_media_next_track(self):
         """Send next track command."""
@@ -424,14 +421,14 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     async def async_media_seek(self, position):
         """Send seek command."""
         if self.device:
-            seek_type = SetSearchMode.CHAPTER if self.media_content_type == MEDIA_TYPE_MUSIC else SetSearchMode.TITLE
+            seek_type = SetSearchMode.CHAPTER if self.media_content_type == MediaType.MUSIC else SetSearchMode.TITLE
             seek_position = timedelta(seconds=position)
             await self.device.async_set_position(seek_type, seek_position)
 
     async def async_volume_up(self):
         """Turn volume up for media player."""
         if self.device:
-            await self.device.async_send_command(OppoRemoteCode.VDN)
+            await self.device.async_send_command(OppoRemoteCode.VUP)
 
     async def async_volume_down(self):
         """Turn volume down for media player."""
@@ -442,12 +439,12 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         """Set repeat mode."""
         one_mode = SetRepeatMode.TRACK
         if self.device:
-            if self.media_content_type == MEDIA_TYPE_VIDEO:
+            if self.media_content_type == MediaType.VIDEO:
                 one_mode = SetRepeatMode.CHAPTER
             
-            if repeat == REPEAT_MODE_ONE:
+            if RepeatMode == Repeatmode.ONE:
                 await self.device.async_set_repeat_mode(one_mode)
-            elif repeat == REPEAT_MODE_ALL:
+            elif RepeatMode == RepeatMode.ALL:
                 await self.device.async_set_repeat_mode(SetRepeatMode.ALL)
             else:
                 await self.device.async_set_repeat_mode(SetRepeatMode.OFF)
@@ -455,7 +452,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     async def async_set_shuffle(self, shuffle):
         """Enable/disable shuffle mode."""
         if self.device:
-            if self.media_content_type == MEDIA_TYPE_MUSIC:
+            if self.media_content_type == MediaType.MUSIC:
                 if shuffle:
                     await self.device.async_set_repeat_mode(SetRepeatMode.RANDOM)
                 else:
