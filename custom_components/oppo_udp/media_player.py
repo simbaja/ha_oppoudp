@@ -5,14 +5,10 @@ from typing import Optional
 import logging
 import musicbrainzngs
 
-from homeassistant.components.media_player import DEVICE_CLASS_TV, MediaPlayerEntity
-from homeassistant.components.media_player import MediaPlayerEntity
+from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerDeviceClass
 
 from homeassistant.components.media_player.const import (
-    REPEAT_MODE_ALL,
-    REPEAT_MODE_OFF,
-    REPEAT_MODE_ONE,
-    MediaPlayerEntityFeature, 
+    MediaPlayerEntityFeature,
     MediaType,
     MediaPlayerState,
     RepeatMode,
@@ -20,13 +16,8 @@ from homeassistant.components.media_player.const import (
 
 from homeassistant.const import (
     CONF_HOST,
-    STATE_UNAVAILABLE,
     STATE_PAUSED,
     STATE_PLAYING,
-    STATE_IDLE,
-    STATE_UNKNOWN,
-    STATE_ON,
-    STATE_OFF,
 )
 from homeassistant.core import callback
 import homeassistant.util.dt as dt_util
@@ -34,7 +25,7 @@ import homeassistant.util.dt as dt_util
 from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED, EVENT_DISC_ID_CHANGED
 from oppoudpsdk import OppoClient, OppoDevice, OppoPlaybackStatus, OppoRemoteCode
 from oppoudpsdk import SetInputSource, SetRepeatMode, SetSearchMode
-from oppoudpsdk import DiscType, PlayStatus, RepeatMode, PowerStatus
+from oppoudpsdk import DiscType, PlayStatus, RepeatMode as OppoRepeatMode, PowerStatus
 from oppoudpsdk.const import *
 
 from .entity import OppoUdpEntity
@@ -118,7 +109,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_TV
+        return MediaPlayerDeviceClass.TV
 
     @property
     def playback_info(self) -> OppoPlaybackStatus:
@@ -289,21 +280,21 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         """Return current repeat mode."""
         if self.playback_info:
             return {
-                RepeatMode.REPEAT_ALL: REPEAT_MODE_ALL,
-                RepeatMode.REPEAT_TITLE: REPEAT_MODE_ONE,
-                RepeatMode.REPEAT_CHAPTER: REPEAT_MODE_ONE,
-                RepeatMode.REPEAT_ONE: REPEAT_MODE_ONE,
-                RepeatMode.SHUFFLE: REPEAT_MODE_OFF,
-                RepeatMode.RANDOM: REPEAT_MODE_OFF,
-                RepeatMode.OFF: REPEAT_MODE_OFF
-            }.get(self.playback_info.repeat_mode, REPEAT_MODE_OFF)
+                OppoRepeatMode.REPEAT_ALL: RepeatMode.ALL,
+                OppoRepeatMode.REPEAT_TITLE: RepeatMode.ONE,
+                OppoRepeatMode.REPEAT_CHAPTER: RepeatMode.ONE,
+                OppoRepeatMode.REPEAT_ONE: RepeatMode.ONE,
+                OppoRepeatMode.SHUFFLE: RepeatMode.OFF,
+                OppoRepeatMode.RANDOM: RepeatMode.OFF,
+                OppoRepeatMode.OFF: RepeatMode.OFF
+            }.get(self.playback_info.repeat_mode, RepeatMode.OFF)
         return None
 
     @property
     def shuffle(self):
         """Boolean if shuffle is enabled."""
         if self.playback_info:
-            return self.playback_info.repeat_mode in [RepeatMode.SHUFFLE, RepeatMode.RANDOM]
+            return self.playback_info.repeat_mode in [OppoRepeatMode.SHUFFLE, OppoRepeatMode.RANDOM]
         return None
 
     @property
