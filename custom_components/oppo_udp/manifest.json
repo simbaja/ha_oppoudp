@@ -3,7 +3,7 @@
   "name": "Oppo UDP-20x",
   "config_flow": true,
   "documentation": "https://github.com/simbaja/ha_oppoudp",
-  "requirements": ["oppoudpsdk==0.1.18","magicattr==0.1.5","musicbrainzngs==0.7.1"],
+  "requirements": ["oppoudpsdk==0.1.19","magicattr==0.1.5","musicbrainzngs==0.7.1"],
   "codeowners": ["@simbaja"],	
-  "version": "0.1.18"
+  "version": "0.1.19"
 }
