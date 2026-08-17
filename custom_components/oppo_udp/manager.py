@@ -1,20 +1,29 @@
 """Connection manager Oppo UDP-20x integration."""
 
 import asyncio
-import async_timeout
 import logging
-from typing import Optional
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from oppoudpsdk import (
+    EVENT_CONNECTED,
+    EVENT_DEVICE_STATE_UPDATED,
+    EVENT_DISCONNECTED,
+    OppoClient,
+    OppoDevice,
+)
 
-from oppoudpsdk import OppoClient, OppoDevice
-from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED, EVENT_CONNECTED, EVENT_DISCONNECTED
-
-from .const import *
-from .exceptions import *
+from .const import (
+    ASYNC_TIMEOUT,
+    MAX_RETRY_DELAY,
+    MIN_RETRY_DELAY,
+    RETRY_OFFLINE_COUNT,
+    SIGNAL_CLIENT_CREATED,
+    SIGNAL_CONNECTED,
+    SIGNAL_DISCONNECTED,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,14 +55,14 @@ class OppoUdpManager:
         """
         Indicates whether the coordinator is connected
         """
-        return self._client and self._client.connected
+        return bool(self._client and self._client.connected)
 
     @property
-    def client(self) -> OppoClient:
+    def client(self) -> OppoClient | None:
         return self._client
 
     @property
-    def device(self) -> OppoDevice:
+    def device(self) -> OppoDevice | None:
         if self._client:
             return self._client.device
         return None
@@ -66,10 +75,10 @@ class OppoUdpManager:
         """Start a new OppoClient in the HASS event loop."""
         try:
             _LOGGER.debug('Creating and starting client')
-            await self._get_client()
-            self.hass.loop.create_task(self.client.async_run_client())
+            client = await self._get_client()
+            self.hass.loop.create_task(client.async_run_client())
             _LOGGER.debug('Client running')
-        except:
+        except Exception:
             _LOGGER.debug('Could not start the client')
             self._client = None
             raise
@@ -85,18 +94,13 @@ class OppoUdpManager:
         """Try to reconnect oppo_udp session."""
         self._retry_count += 1
         _LOGGER.info(f"attempting to reconnect to oppo_udp service (attempt {self._retry_count})")
-        
+
         try:
-            with async_timeout.timeout(ASYNC_TIMEOUT):
+            async with asyncio.timeout(ASYNC_TIMEOUT):
                 await self.async_start_client()
-        except Exception as err:
-            _LOGGER.warn(f"could not reconnect: {err}, will retry in {self._get_retry_delay()} seconds")
+        except Exception as err:  # noqa: BLE001 - any failure here should trigger a retry
+            _LOGGER.warning(f"could not reconnect: {err}, will retry in {self._get_retry_delay()} seconds")
             self.hass.loop.call_later(self._get_retry_delay(), self.reconnect)
-            #_LOGGER.debug("forcing a state refresh while disconnected")
-            #try:
-            #    await self._refresh_ha_state()
-            #except Exception as err:
-            #    _LOGGER.debug(f"error refreshing state: {err}")
 
     async def disconnect(self) -> None:
         """Disconnect from the device"""
@@ -106,7 +110,7 @@ class OppoUdpManager:
                 self._client.clear_event_handlers()
                 await self._client.disconnect()
                 self._client = None
-        except:
+        except Exception:
             _LOGGER.exception("An error occurred while disconnecting")
 
     async def on_device_state_updated(self, device: OppoDevice):        
@@ -123,7 +127,7 @@ class OppoUdpManager:
         self._retry_count = 0
         self._dispatch_send(SIGNAL_CONNECTED, self.device)
 
-    def _create_oppo_client(self, event_loop: Optional[asyncio.AbstractEventLoop]) -> OppoClient:
+    def _create_oppo_client(self, event_loop: asyncio.AbstractEventLoop | None) -> OppoClient:
         """
         Create a new OppoClient object with some helpful callbacks.
 
@@ -145,8 +149,8 @@ class OppoUdpManager:
             try:
                 self._client.clear_event_handlers()
                 await self._client.disconnect()
-            except Exception as err:
-                _LOGGER.warn(f'exception while disconnecting client {err}')
+            except Exception as err:  # noqa: BLE001 - best-effort cleanup before creating a new client
+                _LOGGER.warning(f"exception while disconnecting client {err}")
             finally:
                 self._reset_initialization()
         

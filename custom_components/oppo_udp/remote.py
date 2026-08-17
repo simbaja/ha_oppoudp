@@ -11,12 +11,16 @@ from homeassistant.components.remote import (
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
+from oppoudpsdk import (
+    EVENT_DEVICE_STATE_UPDATED,
+    OppoClient,
+    OppoDevice,
+    OppoRemoteCode,
+    PowerStatus,
+)
 
-from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED
-from oppoudpsdk import PowerStatus, OppoRemoteCode, OppoClient, OppoDevice
-
-from .entity import OppoUdpEntity
 from .const import DOMAIN
+from .entity import OppoUdpEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +32,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     manager = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities([OppoUdpRemote(host, DOMAIN, config_entry.entry_id, manager)])
 
-class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
+class OppoUdpRemote(OppoUdpEntity, RemoteEntity):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
     """Device that sends commands to an Oppo UDP."""
 
     @callback
@@ -41,14 +45,14 @@ class OppoUdpRemote(OppoUdpEntity, RemoteEntity):
         self.schedule_update_ha_state()    
 
     @property
-    def is_on(self):
+    def is_on(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Return true if device is on."""
         if self.device:
             return self.device.power_status == PowerStatus.ON
         return False
 
     @property
-    def should_poll(self):
+    def should_poll(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """No polling needed for Oppo UDP."""
         return False
 

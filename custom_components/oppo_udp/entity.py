@@ -1,13 +1,11 @@
 """Base Entity for the Oppo UDP-20x integration."""
 
 import logging
-from typing import Dict, List, Optional
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
+from homeassistant.core import callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-
-
+from homeassistant.helpers.entity import Entity
 from oppoudpsdk import OppoDevice
 
 from .const import DOMAIN, SIGNAL_CLIENT_CREATED, SIGNAL_CONNECTED, SIGNAL_DISCONNECTED
@@ -26,11 +24,11 @@ class OppoUdpEntity(Entity):
         self._manager = manager
 
     @property
-    def device(self) -> OppoDevice:
+    def device(self) -> OppoDevice | None:
         return self._manager.device
 
     @property
-    def available(self) -> bool:
+    def available(self) -> bool:  # pyright: ignore[reportIncompatibleVariableOverride] - HA's cached_property override pattern (see demo/media_player.py); value is dynamic and cannot be a cached_property
         return self._manager.online
 
     @property
@@ -39,24 +37,24 @@ class OppoUdpEntity(Entity):
         return self._host
 
     @property
-    def name(self):
+    def name(self):  # pyright: ignore[reportIncompatibleVariableOverride] - HA's cached_property override pattern (see demo/media_player.py); value is dynamic and cannot be a cached_property
         """Return the name of the entity"""
         return self._name
 
     @property
-    def unique_id(self):
+    def unique_id(self):  # pyright: ignore[reportIncompatibleVariableOverride] - HA's cached_property override pattern (see demo/media_player.py); value is dynamic and cannot be a cached_property
         """Return a unique ID."""
         return self._identifier
 
     @property
-    def should_poll(self):
+    def should_poll(self):  # pyright: ignore[reportIncompatibleVariableOverride] - HA's cached_property override pattern (see demo/media_player.py); value is dynamic and cannot be a cached_property
         """No polling needed for Oppo"""
         return False
 
     @property
-    def device_info(self) -> Dict:
+    def device_info(self) -> DeviceInfo:  # pyright: ignore[reportIncompatibleVariableOverride] - HA's cached_property override pattern (see demo/media_player.py); value is dynamic and cannot be a cached_property
         """Device info dictionary."""
-        attrs = {
+        attrs: DeviceInfo = {
             "identifiers": {(DOMAIN, self._identifier)},
             "name": self.name,
             "manufacturer": "Oppo",

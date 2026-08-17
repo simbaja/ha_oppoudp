@@ -1,36 +1,78 @@
 """Support for Oppo UDP-20x media player."""
+import logging
 from datetime import timedelta
 from string import Template
-from typing import Optional
-import logging
+
+import homeassistant.util.dt as dt_util
 import musicbrainzngs
-
-from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerDeviceClass
-
+from homeassistant.components.media_player import (
+    MediaPlayerDeviceClass,
+    MediaPlayerEntity,
+)
 from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
-    MediaType,
     MediaPlayerState,
+    MediaType,
     RepeatMode,
 )
-
 from homeassistant.const import (
     CONF_HOST,
     STATE_PAUSED,
     STATE_PLAYING,
 )
 from homeassistant.core import callback
-import homeassistant.util.dt as dt_util
+from oppoudpsdk import (
+    EVENT_DEVICE_STATE_UPDATED,
+    EVENT_DISC_ID_CHANGED,
+    DiscType,
+    OppoClient,
+    OppoDevice,
+    OppoPlaybackStatus,
+    OppoRemoteCode,
+    PlayStatus,
+    PowerStatus,
+    SetInputSource,
+    SetRepeatMode,
+    SetSearchMode,
+)
+from oppoudpsdk import RepeatMode as OppoRepeatMode
+from oppoudpsdk.const import (
+    ATTR_DEVICE_CDDB_ID,
+    ATTR_DEVICE_DISC_TYPE,
+    ATTR_DEVICE_HDMI_MODE,
+    ATTR_DEVICE_HDR_SETTING,
+    ATTR_DEVICE_OSD_POSITION,
+    ATTR_DEVICE_SUBTITLE_SHIFT,
+    ATTR_DEVICE_ZOOM_MODE,
+    ATTR_PLAYBACK_ASPECT_RATIO,
+    ATTR_PLAYBACK_AUDIO_TYPE,
+    ATTR_PLAYBACK_CHAPTER,
+    ATTR_PLAYBACK_CHAPTER_DURATION,
+    ATTR_PLAYBACK_CHAPTER_ELAPSED_TIME,
+    ATTR_PLAYBACK_CHAPTER_REMAINING_TIME,
+    ATTR_PLAYBACK_CHAPTER_TOTAL,
+    ATTR_PLAYBACK_MEDIA_FILE_FORMAT,
+    ATTR_PLAYBACK_MEDIA_FILE_NAME,
+    ATTR_PLAYBACK_REPEAT_MODE,
+    ATTR_PLAYBACK_SUBTITLE_TYPE,
+    ATTR_PLAYBACK_TOTAL_DURATION,
+    ATTR_PLAYBACK_TOTAL_ELAPSED_TIME,
+    ATTR_PLAYBACK_TOTAL_REMAINING_TIME,
+    ATTR_PLAYBACK_TRACK,
+    ATTR_PLAYBACK_TRACK_ALBUM,
+    ATTR_PLAYBACK_TRACK_DURATION,
+    ATTR_PLAYBACK_TRACK_ELAPSED_TIME,
+    ATTR_PLAYBACK_TRACK_NAME,
+    ATTR_PLAYBACK_TRACK_PERFORMER,
+    ATTR_PLAYBACK_TRACK_REMAINING_TIME,
+    ATTR_PLAYBACK_TRACK_TOTAL,
+    ATTR_PLAYBACK_VIDEO_3D_STATUS,
+    ATTR_PLAYBACK_VIDEO_HDR_STATUS,
+)
 
-from oppoudpsdk import EVENT_DEVICE_STATE_UPDATED, EVENT_DISC_ID_CHANGED
-from oppoudpsdk import OppoClient, OppoDevice, OppoPlaybackStatus, OppoRemoteCode
-from oppoudpsdk import SetInputSource, SetRepeatMode, SetSearchMode
-from oppoudpsdk import DiscType, PlayStatus, RepeatMode as OppoRepeatMode, PowerStatus
-from oppoudpsdk.const import *
-
-from .entity import OppoUdpEntity
 from .const import DOMAIN
-from .musicbrainz import async_musicbrainz_get_info, MusicBrainzInfo
+from .entity import OppoUdpEntity
+from .musicbrainz import MusicBrainzInfo, async_musicbrainz_get_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,13 +91,13 @@ def strfdelta(tdelta, fmt):
     d = {"D": tdelta.days}
     hours, rem = divmod(tdelta.seconds, 3600)
     minutes, seconds = divmod(rem, 60)
-    d["H"] = '{:02d}'.format(hours)
-    d["M"] = '{:02d}'.format(minutes)
-    d["S"] = '{:02d}'.format(seconds)
+    d["H"] = f'{hours:02d}'
+    d["M"] = f'{minutes:02d}'
+    d["S"] = f'{seconds:02d}'
     t = DeltaTemplate(fmt)
     return t.substitute(**d)
 
-class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
+class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
     """Representation of an Oppo UDP media player."""
 
     def __init__(self, host, name, identifier, manager, **kwargs):
@@ -65,7 +107,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         self._musicbrainz_info = None
 
     @property
-    def musicbrainz_info(self) -> MusicBrainzInfo:
+    def musicbrainz_info(self) -> MusicBrainzInfo | None:
         return self._musicbrainz_info
 
     @callback
@@ -81,10 +123,9 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
     async def _on_disc_id_changed(self, device: OppoDevice):
         """Handle when the disc id changes"""
         self._musicbrainz_info = await async_musicbrainz_get_info(device.cddb_id)
-        pass
 
     @property
-    def state(self):
+    def state(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Return the state of the device."""
         if not self.available:
             return None
@@ -108,39 +149,39 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def device_class(self):
+    def device_class(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         return MediaPlayerDeviceClass.TV
 
     @property
-    def playback_info(self) -> OppoPlaybackStatus:
+    def playback_info(self) -> OppoPlaybackStatus | None:
         """The current playback info"""
         if not self.device:
             return None
         return self.device.playback_attributes
     
     @property
-    def playback_status(self) -> PlayStatus:
+    def playback_status(self) -> PlayStatus | None:
         """The current playback status"""
         if not self.device:
             return None        
         return self.device.playback_status
 
     @property
-    def volume_level(self):
+    def volume_level(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Volume level of the media player (0..1)."""
         if self.device:
             return float(self.device.volume) / 100.0
         return None
 
     @property
-    def is_volume_muted(self):
+    def is_volume_muted(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Boolean if volume is currently muted."""
         if self.device:
             return self.device.is_muted
         return None        
 
     @property
-    def media_content_type(self):
+    def media_content_type(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Content type of current playing media."""
 
         if self.device:
@@ -158,8 +199,10 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_duration(self):            
+    def media_duration(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Duration of current playing media in seconds."""
+        if not self.playback_info:
+            return None
         if self.media_content_type == MediaType.MUSIC:
             return self.playback_info.track_duration.total_seconds()
         if self.media_content_type == MediaType.VIDEO:
@@ -167,8 +210,10 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_position(self):
+    def media_position(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Position of current playing media in seconds."""
+        if not self.playback_info:
+            return None
         if self.media_content_type == MediaType.MUSIC:
             return self.playback_info.track_elapsed_time.total_seconds()
         if self.media_content_type == MediaType.VIDEO:
@@ -176,23 +221,28 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_position_updated_at(self):
+    def media_position_updated_at(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Last valid time of media position."""
         if self.state in (STATE_PLAYING, STATE_PAUSED):
             return dt_util.utcnow()
         return None
 
     @property
-    def media_title(self):
+    def media_title(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Title of current playing media."""
-        if self.media_content_type == MediaType.MUSIC:
+        if self.media_content_type == MediaType.MUSIC and self.playback_info:
             track_name = self.playback_info.track_name
-            if (not track_name or track_name.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.track_titles:
-                mb_track_name = self.musicbrainz_info.track_titles.get(self.media_track, None)
+            if (
+                (not track_name or track_name.endswith("*"))
+                and self.musicbrainz_info
+                and self.musicbrainz_info.track_titles
+                and self.media_track is not None
+            ):
+                mb_track_name = self.musicbrainz_info.track_titles.get(self.media_track)
                 if mb_track_name:
                     return mb_track_name
             return track_name    
-        if self.device:
+        if self.device and self.playback_info:
             if self.playback_info.media_file_name:
                 return self.playback_info.media_file_name
             else:
@@ -207,9 +257,9 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_artist(self):
+    def media_artist(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Artist of current playing media, music track only."""
-        if self.media_content_type == MediaType.MUSIC:
+        if self.media_content_type == MediaType.MUSIC and self.playback_info:
             artist = self.playback_info.track_performer
             if (not artist or artist.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.artist:
                 artist = self.musicbrainz_info.artist
@@ -217,9 +267,9 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_album_name(self):
+    def media_album_name(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Album name of current playing media, music track only."""
-        if self.media_content_type == MediaType.MUSIC:
+        if self.media_content_type == MediaType.MUSIC and self.playback_info:
             album = self.playback_info.track_performer
             if (not album or album.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.title:
                 album = self.musicbrainz_info.title
@@ -227,9 +277,9 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_album_artist(self):
+    def media_album_artist(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Album artist of current playing media, music track only."""
-        if self.media_content_type == MediaType.MUSIC:
+        if self.media_content_type == MediaType.MUSIC and self.playback_info:
             artist = self.playback_info.track_performer
             if (not artist or artist.endswith("*")) and self.musicbrainz_info and self.musicbrainz_info.artist:
                 artist = self.musicbrainz_info.artist
@@ -237,46 +287,48 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def media_track(self):
+    def media_track(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Track number of current playing media, music track only."""
-        if self.media_content_type == MediaType.MUSIC:        
+        if self.media_content_type == MediaType.MUSIC and self.playback_info:        
             return self.playback_info.track        
         return None
 
     @property
-    def media_image_hash(self) -> Optional[str]:
-        if self.media_content_type == MediaType.MUSIC:  
-            if self.musicbrainz_info:
-                return self.musicbrainz_info.release_id
+    def media_image_hash(self) -> str | None:
+        if self.media_content_type == MediaType.MUSIC and self.musicbrainz_info:
+            return self.musicbrainz_info.release_id
         return None
 
-    async def async_get_media_image(self):
-        if self.media_content_type == MediaType.MUSIC:
-            if self.musicbrainz_info and self.musicbrainz_info.image:
-                return self.musicbrainz_info.image, "image/jpeg"
-        return None
+    async def async_get_media_image(self) -> tuple[bytes | None, str | None]:
+        if (
+            self.media_content_type == MediaType.MUSIC
+            and self.musicbrainz_info
+            and self.musicbrainz_info.image
+        ):
+            return self.musicbrainz_info.image, "image/jpeg"
+        return None, None
 
     @property
-    def source(self):
+    def source(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Name of the current input source."""
         if self.device and self.device.input_source:
             return self.device.input_source.name.replace("_"," ").title()
         return None
 
     @property
-    def source_list(self):
+    def source_list(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """List of available input sources."""
         return [e.name.replace("_"," ").title() for e in SetInputSource]
 
     @property
-    def sound_mode(self):
+    def sound_mode(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Name of the current sound mode."""
         if self.playback_info:
             return self.playback_info.audio_type
         return None
 
     @property
-    def repeat(self):
+    def repeat(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Return current repeat mode."""
         if self.playback_info:
             return {
@@ -291,14 +343,14 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         return None
 
     @property
-    def shuffle(self):
+    def shuffle(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         """Boolean if shuffle is enabled."""
         if self.playback_info:
             return self.playback_info.repeat_mode in [OppoRepeatMode.SHUFFLE, OppoRepeatMode.RANDOM]
         return None
 
     @property
-    def supported_features(self):
+    def supported_features(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         return (
             MediaPlayerEntityFeature.PLAY
             | MediaPlayerEntityFeature.PLAY_MEDIA
@@ -319,7 +371,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         )
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self):  # pyright: ignore[reportIncompatibleVariableOverride] - dynamic value; see HA demo/media_player.py cached_property override pattern
         attrs = {}
 
         if self.device:
@@ -361,23 +413,28 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
 
     async def async_turn_on(self):
         """Turn the media player on."""
-        await self.device.async_send_command(OppoRemoteCode.PON)
+        if self.device:
+            await self.device.async_send_command(OppoRemoteCode.PON)
 
     async def async_turn_off(self):
         """Turn the media player off."""
-        await self.device.async_send_command(OppoRemoteCode.POF)
+        if self.device:
+            await self.device.async_send_command(OppoRemoteCode.POF)
 
     async def async_mute_volume(self, mute):
         """Mute the volume."""
-        await self.device.async_send_command(OppoRemoteCode.MUT)      
+        if self.device:
+            await self.device.async_send_command(OppoRemoteCode.MUT)      
 
     async def async_set_volume_level(self, volume):
         """Set volume level, range 0..1."""
-        await self.device.async_set_volume(int(volume * 100.0))
+        if self.device:
+            await self.device.async_set_volume(int(volume * 100.0))
 
     async def async_select_source(self, source):
         """Select input source."""
-        await self.device.async_set_input_source(SetInputSource[source.replace(" ","_").upper()])
+        if self.device:
+            await self.device.async_set_input_source(SetInputSource[source.replace(" ","_").upper()])
 
     async def async_media_play(self):
         """Play media."""
@@ -414,7 +471,7 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
         if self.device:
             seek_type = SetSearchMode.CHAPTER if self.media_content_type == MediaType.MUSIC else SetSearchMode.TITLE
             seek_position = timedelta(seconds=position)
-            await self.device.async_set_position(seek_type, seek_position)
+            await self.device.async_seek_position(seek_type, seek_position)
 
     async def async_volume_up(self):
         """Turn volume up for media player."""
@@ -433,18 +490,17 @@ class OppoUdpMediaPlayer(OppoUdpEntity, MediaPlayerEntity):
             if self.media_content_type == MediaType.VIDEO:
                 one_mode = SetRepeatMode.CHAPTER
             
-            if RepeatMode == Repeatmode.ONE:
-                await self.device.async_set_repeat_mode(one_mode)
-            elif RepeatMode == RepeatMode.ALL:
-                await self.device.async_set_repeat_mode(SetRepeatMode.ALL)
+            if repeat == RepeatMode.ONE:
+                await self.device.async_repeat_mode(one_mode)
+            elif repeat == RepeatMode.ALL:
+                await self.device.async_repeat_mode(SetRepeatMode.ALL)
             else:
-                await self.device.async_set_repeat_mode(SetRepeatMode.OFF)
+                await self.device.async_repeat_mode(SetRepeatMode.OFF)
 
     async def async_set_shuffle(self, shuffle):
         """Enable/disable shuffle mode."""
-        if self.device:
-            if self.media_content_type == MediaType.MUSIC:
-                if shuffle:
-                    await self.device.async_set_repeat_mode(SetRepeatMode.RANDOM)
-                else:
-                    await self.device.async_set_repeat_mode(SetRepeatMode.OFF)
+        if self.device and self.media_content_type == MediaType.MUSIC:
+            if shuffle:
+                await self.device.async_repeat_mode(SetRepeatMode.RANDOM)
+            else:
+                await self.device.async_repeat_mode(SetRepeatMode.OFF)

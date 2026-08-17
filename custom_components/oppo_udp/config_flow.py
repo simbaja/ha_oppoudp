@@ -1,10 +1,9 @@
 """ ConfigFlow for the Oppo UDP-20x Integration """
-import logging
 import ipaddress
+import logging
 import re
 
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from oppoudpsdk import OppoClient
@@ -36,7 +35,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Oppo UDP-20x."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
@@ -82,10 +80,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Validate the user input allows us to connect."""
 
         #connect to the client
-        try:            
+        try:
             client = OppoClient(host, port)
             result = await client.test_connection()
-            if not result:
-                raise HaCannotConnect
-        except:
+        except Exception as err:
+            raise HaCannotConnect from err
+
+        if not result:
             raise HaCannotConnect

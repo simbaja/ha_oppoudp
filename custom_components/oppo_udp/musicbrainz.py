@@ -1,32 +1,29 @@
 """Musicbrainz Query Helper"""
 
-import asyncio
 import logging
-from typing import Dict
 from dataclasses import dataclass
+
 import musicbrainzngs
 
-from .async_helpers import *
-from .const import *
-from .exceptions import *
+from .async_helpers import async_wrap
 
 _LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class MusicBrainzInfo:
   disc_id: str
-  release_id: str = None
-  artist: str = None
-  title: str = None 
-  track_titles: Dict[int,str] = None
-  image: str = None
+  release_id: str | None = None
+  artist: str | None = None
+  title: str | None = None
+  track_titles: dict[int, str] | None = None
+  image: bytes | None = None
 
 def musicbrainz_get_info(disc_id: str) -> MusicBrainzInfo:
   try:
     # the "labels" include enables the cat#s we display
     response = musicbrainzngs.get_releases_by_discid(disc_id, includes=["recordings","artists"])
     return _parse_response(disc_id, response)
-  except Exception as err:
+  except Exception as err:  # noqa: BLE001 - third-party lookup failures should not break setup
     _LOGGER.info(f"Could not get disc information, error={err}")
     return MusicBrainzInfo(disc_id)
 
@@ -43,11 +40,14 @@ def _parse_response(disc_id: str, response: dict) -> MusicBrainzInfo:
       title=response["cdstub"]["title"]
     )
 
+  return MusicBrainzInfo(disc_id)
+
 def _info_from_release(disc_id: str, rel: dict) -> MusicBrainzInfo:
   mbid = rel["id"]
   title = rel["title"]
   artist = None
   tracks = {}
+  image = None
 
   _LOGGER.debug(f"Found release {mbid}, title={title}")
 
@@ -64,7 +64,7 @@ def _info_from_release(disc_id: str, rel: dict) -> MusicBrainzInfo:
         _LOGGER.debug(f"Found {len(tracks)} tracks")
         image = _get_image(mbid)
         if image:
-          _LOGGER.debug(f"Found coverart image")
+          _LOGGER.debug("Found coverart image")
         found = True
         break
     if found:
@@ -72,11 +72,12 @@ def _info_from_release(disc_id: str, rel: dict) -> MusicBrainzInfo:
 
   return MusicBrainzInfo(disc_id, mbid, artist, title, tracks, image)
 
-def _get_image(release_id: str):    
+def _get_image(release_id: str) -> bytes | None:
   try:
     return musicbrainzngs.get_image_front(release_id, "500")
-  except Exception as err:
-    _LOGGER.info(f"Could not get image for disc, error={err}")  
+  except Exception as err:  # noqa: BLE001 - third-party lookup failures should not break setup
+    _LOGGER.info(f"Could not get image for disc, error={err}")
     return None
 
 async_musicbrainz_get_info = async_wrap(musicbrainz_get_info)
+
